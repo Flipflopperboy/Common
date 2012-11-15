@@ -47,6 +47,8 @@
     <Compile Include="Messages\MessageBus.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="EnumerableExtensions.cs" />
+    <Compile Include="Threading\MessageBasedTaskRunner.cs" />
+    <Compile Include="Threading\TaskRunner.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
