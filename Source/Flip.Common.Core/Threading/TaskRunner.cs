@@ -6,16 +6,8 @@ using System.Threading.Tasks;
 
 namespace Flip.Common.Threading
 {
-	public class TaskRunner : IDisposable
+	public abstract class TaskRunner : IDisposable
 	{
-		public TaskRunner(Func<bool> condition, Action action)
-		{
-			_condition = condition;
-			_action = action;
-		}
-
-
-
 		public TaskRunner Start()
 		{
 			if (_task == null)
@@ -24,17 +16,24 @@ namespace Flip.Common.Threading
 				CancellationToken token = tokenSource.Token;
 				var task = new Task(() =>
 				{
-					while (_condition())
+					while (LoopCondition())
 					{
 						if (token.IsCancellationRequested)
 						{
 							return;
 						}
-						_action();
+						LoopAction();
 					}
 					_done = true;
 				}, tokenSource.Token);
 
+				if(_first)
+				{
+					OnFirstStarting();
+					_first = false;
+				}
+
+				OnStarting();
 				_task = new TokenedTask(task, token, tokenSource);
 				_task.Task.Start();
 			}
@@ -63,6 +62,7 @@ namespace Flip.Common.Threading
 		{
 			if (_task != null)
 			{
+				OnPausing();
 				_task.TokenSource.Cancel();
 				_task = null;
 			}
@@ -70,19 +70,27 @@ namespace Flip.Common.Threading
 
 		public void Stop()
 		{
-			_done = true;
-			Pause();
-			RemoveWaiter();
+			Dispose(false);
 		}
 
 
 
+		protected abstract bool LoopCondition();
+		protected abstract void LoopAction();
+		protected virtual void OnFirstStarting()
+		{
+		}
+		protected virtual void OnStarting()
+		{
+		}
+		protected virtual void OnPausing()
+		{
+		}
 		protected virtual void Dispose(bool disposing)
 		{
-			if (disposing)
-			{
-				Stop();
-			}
+			_done = true;
+			Pause();
+			RemoveWaiter();
 		}
 
 
@@ -93,7 +101,7 @@ namespace Flip.Common.Threading
 			CancellationToken token = tokenSource.Token;
 			var task = Task.Factory.StartNew(() =>
 			{
-				while (_condition())
+				while (LoopCondition())
 				{
 					if (token.IsCancellationRequested)
 					{
@@ -125,9 +133,8 @@ namespace Flip.Common.Threading
 
 		private TokenedTask _task;
 		private TokenedTask _waiter;
-		private readonly Func<bool> _condition;
-		private readonly Action _action;
 		private bool _done = false;
+		private bool _first = true;
 
 		private class TokenedTask
 		{

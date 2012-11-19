@@ -1,19 +1,20 @@
-﻿using System;
-using Flip.Common.Messages;
+﻿using Flip.Common.Messages;
+
+
+
 namespace Flip.Common.Threading
 {
-	public class MessageBasedTaskRunner<TStartedMessage, TPausedMessage, TStoppedMessage> : TaskRunner
+	public abstract class MessageBasedTaskRunner<TStartedMessage, TPausedMessage, TStoppedMessage> : TaskRunner
 		where TStartedMessage : IMessage
 		where TPausedMessage : IMessage
-		where TStoppedMessage  : IMessage
+		where TStoppedMessage : IMessage
 	{
-		public MessageBasedTaskRunner(Func<bool> condition, Action action, IMessageBus messageBus)
-			: base(condition, action)
+		public MessageBasedTaskRunner(IMessageBus messageBus)
 		{
 			_messageBus = messageBus;
-			_messageBus.Subscribe<TStartedMessage>(OnStarted);
-			_messageBus.Subscribe<TPausedMessage>(OnPaused);
-			_messageBus.Subscribe<TStoppedMessage>(OnStopped);
+			_messageBus.Subscribe<TStartedMessage>(OnStartedMessage);
+			_messageBus.Subscribe<TPausedMessage>(OnPausedMessage);
+			_messageBus.Subscribe<TStoppedMessage>(OnStoppedMessage);
 		}
 
 
@@ -22,32 +23,32 @@ namespace Flip.Common.Threading
 		{
 			if (disposing)
 			{
-				_messageBus.Unsubscribe<TStartedMessage>(OnStarted);
-				_messageBus.Unsubscribe<TPausedMessage>(OnPaused);
-				_messageBus.Unsubscribe<TStoppedMessage>(OnStopped);
+				_messageBus.Unsubscribe<TStartedMessage>(OnStartedMessage);
+				_messageBus.Unsubscribe<TPausedMessage>(OnPausedMessage);
+				_messageBus.Unsubscribe<TStoppedMessage>(OnStoppedMessage);
 			}
 			base.Dispose(disposing);
 		}
 
 
 
-		private void OnStarted(TStartedMessage message)
+		private void OnStartedMessage(TStartedMessage message)
 		{
 			Start();
 		}
 
-		private void OnPaused(TPausedMessage message)
+		private void OnPausedMessage(TPausedMessage message)
 		{
 			Pause();
 		}
 
-		private void OnStopped(TStoppedMessage message)
+		private void OnStoppedMessage(TStoppedMessage message)
 		{
 			Stop();
 		}
 
 
 
-		private readonly IMessageBus _messageBus;
+		protected readonly IMessageBus _messageBus;
 	}
 }
