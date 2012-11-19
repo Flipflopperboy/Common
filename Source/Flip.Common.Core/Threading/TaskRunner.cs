@@ -53,6 +53,11 @@ namespace Flip.Common.Threading
 				else
 				{
 					_task.Task.Wait();
+					if (_pausing && LoopCondition())
+					{
+						OnPaused();
+					}
+					_pausing = false;
 				}
 			}
 			return this;
@@ -60,12 +65,8 @@ namespace Flip.Common.Threading
 
 		public void Pause()
 		{
-			if (_task != null)
-			{
-				OnPausing();
-				_task.TokenSource.Cancel();
-				_task = null;
-			}
+			_pausing = true;
+			CancelTask();
 		}
 
 		public void Stop()
@@ -83,18 +84,27 @@ namespace Flip.Common.Threading
 		protected virtual void OnStarting()
 		{
 		}
-		protected virtual void OnPausing()
+		protected virtual void OnPaused()
 		{
 		}
 		protected virtual void Dispose(bool disposing)
 		{
 			_done = true;
-			Pause();
+			CancelTask();
 			RemoveWaiter();
 		}
 
 
 
+		private void CancelTask()
+		{
+			if (_task != null)
+			{
+				_task.TokenSource.Cancel();
+				_task = null;
+			}
+		}
+		
 		private TokenedTask CreateWaiter()
 		{
 			var tokenSource = new CancellationTokenSource();
@@ -134,6 +144,7 @@ namespace Flip.Common.Threading
 		private TokenedTask _task;
 		private TokenedTask _waiter;
 		private bool _done = false;
+		private bool _pausing = false;
 		private bool _first = true;
 
 		private class TokenedTask
